@@ -4,6 +4,12 @@ using namespace std;
 
 enum cell_t {zero=0, one, two, three, four, five, six, seven, eight, bomb};
 
+struct Move{
+    bool flag_move;
+    int h;
+    int w;
+};
+
 class Cell {
     bool cover;
     bool flag;
@@ -15,6 +21,7 @@ class Cell {
         bool is_flagged () { return flag; }
         cell_t get_value () {return value; }
         void set_value (cell_t val) {this->value = val;};
+        void set_flag (bool flag) {this->flag = flag;}
         void uncover () {this->cover = false;}
 };
 
@@ -30,9 +37,12 @@ class Grid {
         void display ();
         void final_display ();
         void setup (int);
-
+        bool is_move_valid (Move);
+        bool apply_move (Move);
+        bool is_complete(); 
         // Used for debugging only
         void uncover();
+
 };
 
 Grid::Grid (int width, int height){
@@ -61,7 +71,7 @@ void Grid::final_display (){
     for (int h=0; h<height; ++h){
         for (int w=0; w<width; ++w){
             if (field[h][w].is_flagged()){
-                if (field[h][w].get_value() == bomb) cout<<"O ";
+                if (field[h][w].get_value() == bomb) cout<<"Z ";
                 else cout<<"X ";
             } 
             else if (field[h][w].get_value() == bomb) cout<<"* ";
@@ -111,6 +121,58 @@ void Grid::uncover(){
         }
     }
 };
+bool Grid::is_move_valid(Move move){
+    if (move.h < 0 || move.h >height){
+        cout<<"Row out of bounds. Please insert a number between 1 and "<<height<<'\n';
+        return false;
+    } else if (move.w < 0 || move.w > width){
+        cout<<"Column out of bounds. Please insert a number between 1 and "<<width<<'\n';
+        return false;
+    }
+    return true;
+}
+bool Grid::apply_move(Move move){
+    if (move.flag_move){
+        if (field[move.h][move.w].is_covered()) 
+            field[move.h][move.w].set_flag(! field[move.h][move.w].is_flagged());
+        return false;
+    } else {
+        Cell cell = field[move.h][move.w];
+        if (cell.is_flagged()) return false;
+        if (! cell.is_covered()) return false;
+        if (cell.get_value() == bomb) return true;
+        
+        field[move.h][move.w].uncover();
+        return false;
+    }
+}
+bool Grid::is_complete(){
+    for (int h=0; h<height; ++h){
+        for (int w=0; w<width; ++w){
+            if (field[h][w].get_value() != bomb && field[h][w].is_covered())
+                return false;
+        }
+    }
+    return true;
+}
+Move get_move(){
+    Move move;
+    char c;
+    cout<<"\nFlag (f) or Step (s)?\n";
+    cout<<"Answer: ";
+    cin>>c;
+    if (c == 'f') move.flag_move = true;
+    else move.flag_move = false;
+
+    cout<<"\nLocation (Row & Col): \n";
+    cout<<"Answer: ";
+    cin>>move.h>>move.w;
+    move.h--; move.w--;
+
+    return move;
+}
+
+
 
 int main(){
     const int WIDTH = 8;
@@ -125,7 +187,16 @@ int main(){
 
     while(!game_over){
         Game_grid.display();
-        game_over = true;
+        Move move = get_move();
+        while (!Game_grid.is_move_valid(move)){
+            move = get_move();
+        }
+        game_over = Game_grid.apply_move(move);
+
+        if (Game_grid.is_complete()){
+            game_over = true;
+            game_won = true;
+        }
     }
 
     if (game_won){
