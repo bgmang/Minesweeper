@@ -1,6 +1,7 @@
 #include<bits/stdc++.h>
 
 using namespace std;
+
 enum cell_t {zero=0, one, two, three, four, five, six, seven, eight, bomb};
 
 class Cell {
@@ -27,6 +28,7 @@ class Grid {
         int get_width() {return width;}
         int get_height() {return height;}
         void display ();
+        void final_display ();
         void setup (int);
 
         // Used for debugging only
@@ -47,10 +49,24 @@ Grid::Grid (int width, int height){
 void Grid::display (){
     for (int h=0; h<height; ++h){
         for (int w=0; w<width; ++w){
-            if (field[h][w].is_flagged()) cout<<'f';
-            else if (field[h][w].is_covered()) cout<<'.';
-            else if (field[h][w].get_value() <= 8) cout<<field[h][w].get_value();
-            else cout<<"*";
+            if (field[h][w].is_flagged()) cout<<"f ";
+            else if (field[h][w].is_covered()) cout<<". ";
+            else if (field[h][w].get_value() <= 8) cout<<field[h][w].get_value()<<" ";
+            else cout<<"* ";
+        }
+        cout<<endl;
+    }
+}
+void Grid::final_display (){
+    for (int h=0; h<height; ++h){
+        for (int w=0; w<width; ++w){
+            if (field[h][w].is_flagged()){
+                if (field[h][w].get_value() == bomb) cout<<"O ";
+                else cout<<"X ";
+            } 
+            else if (field[h][w].get_value() == bomb) cout<<"* ";
+            else if (field[h][w].is_covered()) cout<<". ";
+            else cout<<field[h][w].get_value()<<" "; 
         }
         cout<<endl;
     }
@@ -97,15 +113,27 @@ void Grid::uncover(){
 };
 
 int main(){
-    const int WIDTH = 10;
-    const int HEIGHT = 10;
+    const int WIDTH = 8;
+    const int HEIGHT = 8;
     const int num_bombs = 10;
+    
+    bool game_over = false;
+    bool game_won = false;
 
     Grid Game_grid (WIDTH, HEIGHT);
-    // Game_grid.display();
     Game_grid.setup(num_bombs);
-    Game_grid.uncover();
-    Game_grid.display();
 
+    while(!game_over){
+        Game_grid.display();
+        game_over = true;
+    }
+
+    if (game_won){
+        cout<<"\nCongrats, you won the game!\n\n";
+    } else {
+        cout<<"\nOh, no... you've stumbled on a mine!\n\n";
+    }
+
+    Game_grid.final_display();
     return 0;
 }
