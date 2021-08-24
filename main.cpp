@@ -12,8 +12,9 @@ class Cell {
         Cell(): cover(true), flag(false), value(zero) {};
         bool is_covered () { return cover; }
         bool is_flagged () { return flag; }
-        cell_t get_value () {return value; } 
-
+        cell_t get_value () {return value; }
+        void set_value (cell_t val) {this->value = val;};
+        void uncover () {this->cover = false;}
 };
 
 class Grid {
@@ -26,6 +27,10 @@ class Grid {
         int get_width() {return width;}
         int get_height() {return height;}
         void display ();
+        void setup (int);
+
+        // Used for debugging only
+        void uncover();
 };
 
 Grid::Grid (int width, int height){
@@ -50,14 +55,57 @@ void Grid::display (){
         cout<<endl;
     }
 }
+void Grid::setup (int num_bombs){
+    // Place the bombs first
+    for (int k=0; k<num_bombs; ++k){
+        // Attempt to place bomb
+        int h, w;
+        do{
+            h = rand() % height;
+            w = rand() % width;
+        }while (field[h][w].get_value() == bomb);
+        field[h][w].set_value(bomb);
+    }
+    // Mark cells with num of adjacent bombs
+    vector<int> dh {-1, -1, -1, 0, 0, 1, 1, 1};
+    vector<int> dw {-1, 0, 1, -1, 1, -1, 0, 1};
+
+    for (int h=0; h<height; ++h){
+        for (int w=0; w<width; ++w){
+            if (field[h][w].get_value() == bomb) continue;
+            
+            unsigned int num_adj_bombs = 0;
+            // Visit all neighbouring cells
+            for (int i=0; i<dh.size(); ++i){
+                int neighbour_h = h + dh[i];
+                int neighbour_w = w + dw[i];
+                if ((neighbour_h >= 0 && neighbour_h < height) && 
+                    (neighbour_w >=0 && neighbour_w < width) && 
+                    field[neighbour_h][neighbour_w].get_value() == bomb) 
+                    num_adj_bombs++;
+            }
+            field[h][w].set_value(static_cast<cell_t>(num_adj_bombs));
+        }
+    }
+} 
+void Grid::uncover(){
+    for (int h=0; h<height; ++h){
+        for (int w=0; w<width; ++w){
+            field[h][w].uncover();
+        }
+    }
+};
 
 int main(){
     const int WIDTH = 10;
     const int HEIGHT = 10;
+    const int num_bombs = 10;
 
     Grid Game_grid (WIDTH, HEIGHT);
+    // Game_grid.display();
+    Game_grid.setup(num_bombs);
+    Game_grid.uncover();
     Game_grid.display();
-
 
     return 0;
 }
