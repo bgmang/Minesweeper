@@ -82,13 +82,17 @@ void Grid::final_display (){
     }
 }
 void Grid::setup (int num_bombs){
+    random_device rd;
+    mt19937 rgen ( rd() );
+
+    
     // Place the bombs first
     for (int k=0; k<num_bombs; ++k){
         // Attempt to place bomb
         int h, w;
         do{
-            h = rand() % height;
-            w = rand() % width;
+            h = rgen() % height;
+            w = rgen() % width;
         }while (field[h][w].get_value() == bomb);
         field[h][w].set_value(bomb);
     }
@@ -158,14 +162,12 @@ bool Grid::is_complete(){
 Move get_move(){
     Move move;
     char c;
-    cout<<"\nFlag (f) or Step (s)?\n";
+    cout<<"\nInsert Move. Move type is flag/step (f)/(s),  Row (1-8), Col (1-8); E.g. f 1 5, s 7 2, etc.\n";
     cout<<"Answer: ";
     cin>>c;
     if (c == 'f') move.flag_move = true;
     else move.flag_move = false;
 
-    cout<<"\nLocation (Row & Col): \n";
-    cout<<"Answer: ";
     cin>>move.h>>move.w;
     move.h--; move.w--;
 
@@ -179,7 +181,7 @@ int main(){
     const int HEIGHT = 8;
     const int num_bombs = 10;
     
-    bool game_over = false;
+    bool game_over = true;
     bool game_won = false;
 
     Grid Game_grid (WIDTH, HEIGHT);
