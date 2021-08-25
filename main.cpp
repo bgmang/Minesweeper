@@ -2,13 +2,15 @@
 
 using namespace std;
 
-enum cell_t {zero=0, one, two, three, four, five, six, seven, eight, bomb};
+enum cell_t {zero=0, one, two, three, four, five, six, seven, eight, mine};
+enum move_t {flag=true, step};
 
 struct Move{
-    bool flag_move;
+    move_t type;
     int h;
     int w;
 };
+
 
 class Cell {
     bool cover;
@@ -17,13 +19,34 @@ class Cell {
 
     public:
         Cell(): cover(true), flag(false), value(zero) {};
+
         bool is_covered () { return cover; }
         bool is_flagged () { return flag; }
         cell_t get_value () {return value; }
-        void set_value (cell_t val) {this->value = val;};
+        void set_value (cell_t val) {this->value = val;}
         void set_flag (bool flag) {this->flag = flag;}
+ 
+        void display ();
+        void final_display();
         void uncover () {this->cover = false;}
+        
 };
+
+void Cell::display (){
+    if (is_flagged()) cout<<"f ";
+    else if (is_covered()) cout<<". ";
+    else if (value <= 8) cout<<value<<" ";
+    else cout<<"* ";
+}
+void Cell::final_display (){
+    if (is_flagged()){
+        if (value == mine) cout<<"Z ";
+        else cout<<"X ";
+    } 
+    else if (value == mine) cout<<"* ";
+    else if (is_covered()) cout<<". ";
+    else cout<<value<<" ";    
+}
 
 class Grid {
     int width;
@@ -32,8 +55,7 @@ class Grid {
 
     public:
         Grid (int, int);
-        int get_width() {return width;}
-        int get_height() {return height;}
+
         void display ();
         void final_display ();
         void setup (int);
@@ -45,76 +67,67 @@ class Grid {
 
 };
 
+void add_cells(int, int, vector<vector<Cell>>&);
+void place_mines (int, vector<vector<Cell>>&);
+
 Grid::Grid (int width, int height){
     this->width = width;
     this->height = height;
-    for (int h=0; h<this->height; ++h){
-        vector<Cell> row;
-        for (int w=0; w<this->width; ++w){
-            row.push_back(Cell());
-        }
-        this->field.push_back(row);
-    }
+    add_cells (height, width, this->field);
 }
 void Grid::display (){
-    for (int h=0; h<height; ++h){
-        for (int w=0; w<width; ++w){
-            if (field[h][w].is_flagged()) cout<<"f ";
-            else if (field[h][w].is_covered()) cout<<". ";
-            else if (field[h][w].get_value() <= 8) cout<<field[h][w].get_value()<<" ";
-            else cout<<"* ";
+    for (auto row : field){
+        for (auto cell : row){
+            cell.display();
         }
         cout<<endl;
     }
 }
 void Grid::final_display (){
-    for (int h=0; h<height; ++h){
-        for (int w=0; w<width; ++w){
-            if (field[h][w].is_flagged()){
-                if (field[h][w].get_value() == bomb) cout<<"Z ";
-                else cout<<"X ";
-            } 
-            else if (field[h][w].get_value() == bomb) cout<<"* ";
-            else if (field[h][w].is_covered()) cout<<". ";
-            else cout<<field[h][w].get_value()<<" "; 
+    for (auto row : field){
+        for (auto cell : row){
+            cell.final_display();
         }
         cout<<endl;
     }
 }
-void Grid::setup (int num_bombs){
-    random_device rd;
-    mt19937 rgen ( rd() );
+void Grid::setup (int num_mines){
 
+    // Place the mines first
+    place_mines (num_mines, this->field);
+
+    // random_device rd;
+    // mt19937 rgen ( rd() );
+
+    // for (int k=0; k<num_mines; ++k){
+    //     // Attempt to place mine
+    //     int h, w;
+    //     do{
+    //         h = rgen() % height;
+    //         w = rgen() % width;
+    //     }while (field[h][w].get_value() == mine);
+    //     field[h][w].set_value(mine);
+    // }
     
-    // Place the bombs first
-    for (int k=0; k<num_bombs; ++k){
-        // Attempt to place bomb
-        int h, w;
-        do{
-            h = rgen() % height;
-            w = rgen() % width;
-        }while (field[h][w].get_value() == bomb);
-        field[h][w].set_value(bomb);
-    }
-    // Mark cells with num of adjacent bombs
+    // Mark cells with num of adjacent mines
     vector<int> dh {-1, -1, -1, 0, 0, 1, 1, 1};
     vector<int> dw {-1, 0, 1, -1, 1, -1, 0, 1};
 
     for (int h=0; h<height; ++h){
         for (int w=0; w<width; ++w){
-            if (field[h][w].get_value() == bomb) continue;
+            if (field[h][w].get_value() == mine) continue;
             
-            unsigned int num_adj_bombs = 0;
+            unsigned int num_adj_mines = 0;
             // Visit all neighbouring cells
             for (int i=0; i<dh.size(); ++i){
                 int neighbour_h = h + dh[i];
                 int neighbour_w = w + dw[i];
                 if ((neighbour_h >= 0 && neighbour_h < height) && 
                     (neighbour_w >=0 && neighbour_w < width) && 
-                    field[neighbour_h][neighbour_w].get_value() == bomb) 
-                    num_adj_bombs++;
+                    field[neighbour_h][neighbour_w].get_value() == mine) 
+                    num_adj_mines++;
             }
-            field[h][w].set_value(static_cast<cell_t>(num_adj_bombs));
+            field[h][w].set_value(static_cast<cell_t>(num_adj_mines));
         }
     }
 } 
@@ -136,7 +149,7 @@ bool Grid::is_move_valid(Move move){
     return true;
 }
 bool Grid::apply_move(Move move){
-    if (move.flag_move){
+    if (move.type == flag){
         if (field[move.h][move.w].is_covered()) 
             field[move.h][move.w].set_flag(! field[move.h][move.w].is_flagged());
         return false;
@@ -144,7 +157,7 @@ bool Grid::apply_move(Move move){
         Cell cell = field[move.h][move.w];
         if (cell.is_flagged()) return false;
         if (! cell.is_covered()) return false;
-        if (cell.get_value() == bomb) return true;
+        if (cell.get_value() == mine) return true;
         
         field[move.h][move.w].uncover();
         
@@ -181,7 +194,7 @@ bool Grid::apply_move(Move move){
 bool Grid::is_complete(){
     for (int h=0; h<height; ++h){
         for (int w=0; w<width; ++w){
-            if (field[h][w].get_value() != bomb && field[h][w].is_covered())
+            if (field[h][w].get_value() != mine && field[h][w].is_covered())
                 return false;
         }
     }
@@ -193,8 +206,8 @@ Move get_move(){
     cout<<"\nInsert Move. Move type is flag/step (f)/(s),  Row (1-8), Col (1-8); E.g. f 1 5, s 7 2, etc.\n";
     cout<<"Answer: ";
     cin>>c>>move.h>>move.w;
-    if (c == 'f') move.flag_move = true;
-    else move.flag_move = false;
+    if (c == 'f') move.type = flag;
+    else move.type = step;
 
     move.h--; move.w--;
 
@@ -202,17 +215,39 @@ Move get_move(){
 }
 
 
+void add_cells (int height, int width, vector<vector<Cell>>& field){
+    for (int h=0; h<height; ++h){
+        vector<Cell> row;
+        for (int w=0; w<width; ++w)
+            row.push_back(Cell());
+        
+        field.push_back(row);
+    }
+}
+void place_mines (int num_mines, vector<vector<Cell>>& field){
+    random_device rd;
+    mt19937 rgen (rd());
+    
+    while(num_mines--){
+        int h, w;
+        do{
+            h = rgen() % field.size();
+            w = rgen() % field[0].size();
+        }while (field[h][w].get_value() == mine);
+        field[h][w].set_value(mine);
+    }
+}
 
 int main(){
     const int WIDTH = 8;
     const int HEIGHT = 8;
-    const int num_bombs = 10;
+    const int num_mines = 10;
     
     bool game_over = false;
     bool game_won = false;
 
     Grid Game_grid (WIDTH, HEIGHT);
-    Game_grid.setup(num_bombs);
+    Game_grid.setup(num_mines);
 
     while(!game_over){
         Game_grid.display();
