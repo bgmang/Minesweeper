@@ -147,6 +147,34 @@ bool Grid::apply_move(Move move){
         if (cell.get_value() == bomb) return true;
         
         field[move.h][move.w].uncover();
+        
+        if (field[move.h][move.w].get_value() == zero){
+        //   If the uncovered cell has 0 mines attached to it, run a BFS search 
+        // to uncover all subsequent neighbouring cells with value 0;
+            queue<pair<int, int>> bfs;
+            bfs.push({move.h, move.w});
+            while (! bfs.empty()){
+                pair<int, int> loc = bfs.front();
+                bfs.pop();
+
+                field[loc.first][loc.second].uncover();
+                vector<int> dh {-1, -1, -1, 0, 0, 1, 1, 1};
+                vector<int> dw {-1, 0, 1, -1, 1, -1, 0, 1};
+
+                for (int i=0; i<dh.size(); ++i){
+                    int neighbour_h = loc.first + dh[i];
+                    int neighbour_w = loc.second + dw[i];
+
+                    if ( (neighbour_h >=0 && neighbour_h < height)  && (neighbour_w >=0 && neighbour_w < width) && field[neighbour_h][neighbour_w].is_covered()){
+                        if (field[neighbour_h][neighbour_w].get_value() == zero)
+                            bfs.push({neighbour_h, neighbour_w});
+                        else
+                            field[neighbour_h][neighbour_w].uncover();
+                    }
+                }
+            }
+        }
+        
         return false;
     }
 }
@@ -164,11 +192,10 @@ Move get_move(){
     char c;
     cout<<"\nInsert Move. Move type is flag/step (f)/(s),  Row (1-8), Col (1-8); E.g. f 1 5, s 7 2, etc.\n";
     cout<<"Answer: ";
-    cin>>c;
+    cin>>c>>move.h>>move.w;
     if (c == 'f') move.flag_move = true;
     else move.flag_move = false;
 
-    cin>>move.h>>move.w;
     move.h--; move.w--;
 
     return move;
@@ -181,7 +208,7 @@ int main(){
     const int HEIGHT = 8;
     const int num_bombs = 10;
     
-    bool game_over = true;
+    bool game_over = false;
     bool game_won = false;
 
     Grid Game_grid (WIDTH, HEIGHT);
